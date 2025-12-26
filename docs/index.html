@@ -17,11 +17,11 @@
         <main>
             <!-- Section de génération -->
             <section class="generate-section">
-                <button id="generateBtn" class="btn-generate">
+        <aside id="terminalPanel" class="terminal">
                     <span class="btn-icon">🎬</span>
-                    Lire une histoire et la narrer
+                <strong>Terminal</strong>
                 </button>
-                
+                    <button id="terminalPause" title="Pause/lecture">⏸️</button>
                 <div id="loadingSection" class="loading-section hidden">
                     <div class="loader"></div>
                     <div id="loadingStatus" class="loading-status">
@@ -89,6 +89,24 @@
                 <span>Terminal</span>
                 <div class="terminal-controls">
                     <button id="terminalPause" title="Pause">⏸️</button>
+                    <button id="terminalClear" title="Effacer">🧹</button>
+                </div>
+            </div>
+            <pre id="terminalOutput" class="terminal-output" aria-live="polite"></pre>
+        </aside>
+        <aside id="terminalPanel" class="terminal">
+            <div class="terminal-header">
+                <strong>Terminal</strong>
+                <div class="terminal-controls">
+                    <label class="term-filter"><input type="checkbox" id="filterInfo" checked> INFO</label>
+                    <label class="term-filter"><input type="checkbox" id="filterWarn" checked> WARN</label>
+                    <label class="term-filter"><input type="checkbox" id="filterError" checked> ERROR</label>
+                    <input id="terminalSearch" class="term-search" type="text" placeholder="Rechercher…" />
+                    <span id="terminalCounters" class="term-counters">I:0 W:0 E:0</span>
+                    <button id="terminalAutoscroll" title="Auto-scroll">🔁</button>
+                    <button id="terminalCopy" title="Copier">📋</button>
+                    <button id="terminalExport" title="Télécharger JSON">💾</button>
+                    <button id="terminalPause" title="Pause/lecture">⏸️</button>
                     <button id="terminalClear" title="Effacer">🧹</button>
                 </div>
             </div>

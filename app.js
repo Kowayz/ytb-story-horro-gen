@@ -16,7 +16,13 @@ let mediaRecorder = null;
 let recordedChunks = [];
 
 let terminalPaused = false;
-let terminalEl, terminalClearBtn, terminalPauseBtn;
+let autoScroll = true;
+let terminalEl, terminalClearBtn, terminalPauseBtn, terminalCopyBtn, terminalExportBtn, terminalAutoscrollBtn;
+let filterInfoEl, filterWarnEl, filterErrorEl, terminalSearchEl, terminalCountersEl;
+const logStore = [];
+const counters = { info: 0, warn: 0, error: 0 };
+const filters = { info: true, warn: true, error: true };
+let searchText = '';
 
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
@@ -79,7 +85,7 @@ async function fetchRandomRedditStory() {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
-    const resp = await fetch('https://www.reddit.com/r/scarystories/hot.json?limit=100', { signal: controller.signal });
+    const resp = await instrumentedFetch('https://www.reddit.com/r/scarystories/hot.json?limit=100', { signal: controller.signal });
     clearTimeout(timeout);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const json = await resp.json();
@@ -301,35 +307,114 @@ function setupTerminal() {
   terminalEl = document.getElementById('terminalOutput');
   terminalClearBtn = document.getElementById('terminalClear');
   terminalPauseBtn = document.getElementById('terminalPause');
+  terminalCopyBtn = document.getElementById('terminalCopy');
+  terminalExportBtn = document.getElementById('terminalExport');
+  terminalAutoscrollBtn = document.getElementById('terminalAutoscroll');
+  filterInfoEl = document.getElementById('filterInfo');
+  filterWarnEl = document.getElementById('filterWarn');
+  filterErrorEl = document.getElementById('filterError');
+  terminalSearchEl = document.getElementById('terminalSearch');
+  terminalCountersEl = document.getElementById('terminalCounters');
   if (!terminalEl) return;
   terminalClearBtn?.addEventListener('click', () => { terminalEl.textContent = ''; });
   terminalPauseBtn?.addEventListener('click', () => {
     terminalPaused = !terminalPaused;
     terminalPauseBtn.textContent = terminalPaused ? '▶️' : '⏸️';
   });
+  terminalAutoscrollBtn?.addEventListener('click', () => {
+    autoScroll = !autoScroll;
+    terminalAutoscrollBtn.textContent = autoScroll ? '🔁' : '⏹️';
+  });
+  filterInfoEl?.addEventListener('change', () => { filters.info = !!filterInfoEl.checked; applyFilters(); });
+  filterWarnEl?.addEventListener('change', () => { filters.warn = !!filterWarnEl.checked; applyFilters(); });
+  filterErrorEl?.addEventListener('change', () => { filters.error = !!filterErrorEl.checked; applyFilters(); });
+  terminalSearchEl?.addEventListener('input', () => { searchText = terminalSearchEl.value.toLowerCase(); applyFilters(); });
+  terminalCopyBtn?.addEventListener('click', () => {
+    const text = logStore.map(e => `[${new Date(e.ts).toLocaleTimeString()}] ${e.level.toUpperCase()}: ${e.msg}`).join('\n');
+    navigator.clipboard?.writeText(text).then(() => log('info', 'Logs copiés dans le presse-papiers'));
+  });
+  terminalExportBtn?.addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(logStore, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `terminal-logs-${Date.now()}.json`; a.click();
+    URL.revokeObjectURL(url);
+    log('info', 'Export JSON des logs téléchargé');
+  });
   const orig = { log: console.log, warn: console.warn, error: console.error, info: console.info };
   console.log = (...args) => { log('info', args.join(' ')); orig.log.apply(console, args); };
   console.warn = (...args) => { log('warn', args.join(' ')); orig.warn.apply(console, args); };
-  console.error = (...args) => { log('error', args.join(' ')); orig.error.apply(console, args); };
+  console.error = (...args) => { const err = args[0] instanceof Error ? args[0] : new Error(args.join(' ')); log('error', err.message, { stack: err.stack }); orig.error.apply(console, args); };
   console.info = (...args) => { log('info', args.join(' ')); orig.info.apply(console, args); };
 }
 
-function log(level, msg) {
+function log(level, msg, ctx = {}) {
   if (!terminalEl || terminalPaused) return;
-  const time = new Date().toLocaleTimeString();
+  const entry = { ts: Date.now(), level, msg, ctx };
+  logStore.push(entry);
+  counters[level]++;
+  updateCounters();
+  const passes = filters[level] && (!searchText || (String(msg).toLowerCase().includes(searchText)));
+  const time = new Date(entry.ts).toLocaleTimeString();
   const line = document.createElement('div');
   line.className = 'term-line';
+  line.dataset.level = level;
+  line.dataset.text = String(msg).toLowerCase();
+  line.style.display = passes ? '' : 'none';
   const timeSpan = document.createElement('span');
   timeSpan.className = 'term-time';
-  timeSpan.textContent = `[${time}] `;
-  const levelSpan = document.createElement('span');
-  levelSpan.className = `term-level-${level}`;
-  levelSpan.textContent = level.toUpperCase();
+  timeSpan.textContent = `[${time}]`;
+  const badge = document.createElement('span');
+  badge.className = `term-badge term-badge-${level}`;
+  badge.textContent = level.toUpperCase();
   const msgSpan = document.createElement('span');
-  msgSpan.textContent = `: ${msg}`;
+  msgSpan.className = 'term-msg';
+  msgSpan.textContent = ` ${msg}`;
   line.appendChild(timeSpan);
-  line.appendChild(levelSpan);
+  line.appendChild(badge);
   line.appendChild(msgSpan);
+  if (ctx && (ctx.durationMs || ctx.type || ctx.status || ctx.error)) {
+    const details = document.createElement('span');
+    details.className = 'term-context';
+    details.textContent = ` ${JSON.stringify(ctx)}`;
+    line.appendChild(details);
+  }
+  if (ctx && ctx.stack) {
+    const stackEl = document.createElement('div');
+    stackEl.className = 'term-stack';
+    stackEl.textContent = ctx.stack;
+    line.appendChild(stackEl);
+  }
   terminalEl.appendChild(line);
-  terminalEl.scrollTop = terminalEl.scrollHeight;
+  if (autoScroll) terminalEl.scrollTop = terminalEl.scrollHeight;
+}
+
+function updateCounters() {
+  if (!terminalCountersEl) return;
+  terminalCountersEl.textContent = `I:${counters.info} W:${counters.warn} E:${counters.error}`;
+}
+
+function applyFilters() {
+  Array.from(terminalEl.children).forEach(line => {
+    const level = line.dataset.level;
+    const text = line.dataset.text || '';
+    const visibleByLevel = filters[level];
+    const visibleBySearch = !searchText || text.includes(searchText);
+    line.style.display = (visibleByLevel && visibleBySearch) ? '' : 'none';
+  });
+}
+
+async function instrumentedFetch(url, options = {}) {
+  const start = performance.now();
+  log('info', `HTTP ${options.method || 'GET'} ${url}`, { type: 'fetch', phase: 'start' });
+  try {
+    const resp = await fetch(url, options);
+    const dur = Math.round(performance.now() - start);
+    log(resp.ok ? 'info' : 'warn', `HTTP ${resp.status} ${url} (${dur}ms)`, { type: 'fetch', status: resp.status, durationMs: dur });
+    return resp;
+  } catch (e) {
+    const dur = Math.round(performance.now() - start);
+    log('error', `HTTP error ${url} (${dur}ms)`, { type: 'fetch', durationMs: dur, error: e.message, stack: e.stack });
+    throw e;
+  }
 }
