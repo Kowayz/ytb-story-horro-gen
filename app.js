@@ -35,7 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
+  log('info', '🔧 Installation des écouteurs d\'événements');
   generateBtn.addEventListener('click', runClientOnlyFlow);
+  log('info', '✅ Écouteur generateBtn installé');
   document.getElementById('diagnoseBtn')?.addEventListener('click', runDiagnostics);
   document.getElementById('newVideoBtn')?.addEventListener('click', resetAndGenerate);
   document.getElementById('retryBtn')?.addEventListener('click', runClientOnlyFlow);
@@ -99,6 +101,7 @@ async function runDiagnostics() {
 }
 
 async function runClientOnlyFlow() {
+  log('info', '🚀 runClientOnlyFlow appelé');
   try {
     hideAllSections();
     showSection(loadingSection);
@@ -191,7 +194,8 @@ function speakStory(text) {
 function speakScenes(scenes, title = '') {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
-  const lang = detectLanguage(text);
+  const sampleText = scenes[0] || title || 'test';
+  const lang = detectLanguage(sampleText);
   if (autoLangEnabled) selectBestVoiceForLang(lang);
   const voice = getSelectedVoice();
   const preset = getTonePreset();
