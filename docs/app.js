@@ -1,3 +1,6 @@
+// Horror Story Generator - Client-only
+console.log('🔴 app.js chargé');
+
 // Éléments DOM
 const generateBtn = document.getElementById('generateBtn');
 const loadingSection = document.getElementById('loadingSection');
@@ -8,14 +11,12 @@ const loadingText = document.querySelector('.loading-text');
 const sceneCanvas = document.getElementById('sceneCanvas');
 const recordBtn = document.getElementById('recordBtn');
 
-// Données
 let currentStory = null;
 let currentScenes = [];
 let recording = false;
 let mediaRecorder = null;
 let recordedChunks = [];
 
-// Terminal intégré
 let terminalPaused = false;
 let autoScroll = true;
 let persistEnabled = true;
@@ -28,6 +29,7 @@ const filters = { info: true, warn: true, error: true };
 let searchText = '';
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🟢 DOM prêt');
     setupEventListeners();
     setupTerminal();
     initVoices();
@@ -36,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
+    console.log('🔧 Setup listeners');
     generateBtn.addEventListener('click', runClientOnlyFlow);
     document.getElementById('diagnoseBtn')?.addEventListener('click', runDiagnostics);
     document.getElementById('newVideoBtn')?.addEventListener('click', resetAndGenerate);
@@ -48,7 +51,9 @@ function setupEventListeners() {
         autoLangEnabled = !!e.target.checked; saveSettings();
     });
     document.getElementById('persistSettings')?.addEventListener('change', (e) => {
-        persistEnabled = !!e.target.checked; if (persistEnabled) saveSettings(); else localStorage.removeItem('ttsSettings');
+        persistEnabled = !!e.target.checked;
+        if (persistEnabled) saveSettings();
+        else localStorage.removeItem('ttsSettings');
     });
     document.getElementById('voiceSelect')?.addEventListener('change', saveSettings);
     document.getElementById('tonePreset')?.addEventListener('change', saveSettings);
@@ -60,22 +65,21 @@ function setupEventListeners() {
 async function runDiagnostics() {
     log('info', 'Diagnostic démarré…');
     try {
-        // Contexte de page
         log('info', `Origine: ${location.protocol}//${location.hostname}`);
         log('info', `HTTPS: ${location.protocol === 'https:'}`);
         log('info', `GitHub Pages: ${/github\.io$/i.test(location.hostname)}`);
         log('info', `UserAgent: ${navigator.userAgent}`);
 
-        // Web Speech
         const hasSpeech = 'speechSynthesis' in window;
         log(hasSpeech ? 'info' : 'warn', `Web Speech supporté: ${hasSpeech}`);
         let voicesCount = 0;
         try {
             voicesCount = window.speechSynthesis.getVoices().length;
             log('info', `Voix disponibles: ${voicesCount}`);
-        } catch (e) { log('warn', `Lecture des voix impossible: ${e.message}`); }
+        } catch (e) {
+            log('warn', `Lecture des voix impossible: ${e.message}`);
+        }
 
-        // Media / Canvas
         const hasMediaRecorder = 'MediaRecorder' in window;
         log(hasMediaRecorder ? 'info' : 'warn', `MediaRecorder: ${hasMediaRecorder}`);
         const hasAudioContext = !!(window.AudioContext || window.webkitAudioContext);
@@ -83,10 +87,14 @@ async function runDiagnostics() {
         const canCapture = !!sceneCanvas?.captureStream;
         log(canCapture ? 'info' : 'warn', `Canvas.captureStream: ${canCapture}`);
 
-        // Stockage
-        try { localStorage.setItem('__diag', 'ok'); localStorage.removeItem('__diag'); log('info', 'localStorage OK'); } catch { log('warn', 'localStorage indisponible'); }
+        try {
+            localStorage.setItem('__diag', 'ok');
+            localStorage.removeItem('__diag');
+            log('info', 'localStorage OK');
+        } catch {
+            log('warn', 'localStorage indisponible');
+        }
 
-        // Permissions (facultatif)
         if ('permissions' in navigator) {
             try {
                 const mic = await navigator.permissions.query({ name: 'microphone' });
@@ -94,7 +102,6 @@ async function runDiagnostics() {
             } catch {}
         }
 
-        // Réseau Reddit
         try {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 5000);
@@ -112,6 +119,7 @@ async function runDiagnostics() {
 }
 
 async function runClientOnlyFlow() {
+    console.log('🚀 runClientOnlyFlow');
     try {
         hideAllSections();
         showSection(loadingSection);
@@ -129,8 +137,7 @@ async function runClientOnlyFlow() {
         updateLoadingStep('audio', 'active');
         updateLoadingText('Narration IA en cours...');
 
-        // Speak title + scenes with selected voice/tone
-        speakScenes(splitIntoScenes(`${story.text}`, 6), story.title);
+        speakStory(`${story.title}. ${story.text}`);
         log('info', 'Narration démarrée via Web Speech');
         updateLoadingStep('audio', 'completed');
 
@@ -156,7 +163,7 @@ async function runClientOnlyFlow() {
 }
 
 async function fetchRandomRedditStory() {
-    log('info', 'Appel à l’API publique Reddit…');
+    log('info', 'Appel à l\'API publique Reddit…');
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 8000);
@@ -210,15 +217,18 @@ function splitIntoScenes(text, maxScenes = 6) {
 }
 
 function speakStory(text) {
-    if (!('speechSynthesis' in window)) { log('warn', 'Web Speech non supporté'); return; }
-    // Deprecated single blob; use scene-based speaking
+    if (!('speechSynthesis' in window)) {
+        log('warn', 'Web Speech non supporté');
+        return;
+    }
     speakScenes(splitIntoScenes(text, 6), '');
 }
 
 function speakScenes(scenes, title = '') {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-    const lang = detectLanguage(text);
+    const sampleText = scenes[0] || title || 'test';
+    const lang = detectLanguage(sampleText);
     if (autoLangEnabled) selectBestVoiceForLang(lang);
     const voice = getSelectedVoice();
     const preset = getTonePreset();
@@ -228,7 +238,10 @@ function speakScenes(scenes, title = '') {
     log('info', `Lecture avec voix: ${voice?.name || 'par défaut'}, preset: ${preset.name}`);
     let i = 0;
     const speakNext = () => {
-        if (i >= items.length) { log('info', 'Narration terminée'); return; }
+        if (i >= items.length) {
+            log('info', 'Narration terminée');
+            return;
+        }
         const text = items[i++];
         const cfg = adjustToneForText(text, preset);
         const u = new SpeechSynthesisUtterance(text);
@@ -238,8 +251,15 @@ function speakScenes(scenes, title = '') {
         u.pitch = clamp(cfg.pitch, 0.1, 2.0);
         u.volume = clamp(cfg.volume, 0.0, 1.0);
         u.onend = () => setTimeout(speakNext, cfg.pauseMs || 250);
-        u.onerror = (e) => { log('error', 'Erreur TTS', { error: e?.error }); setTimeout(speakNext, 250); };
-        try { window.speechSynthesis.speak(u); } catch (e) { log('error', e.message); }
+        u.onerror = (e) => {
+            log('error', 'Erreur TTS', { error: e?.error });
+            setTimeout(speakNext, 250);
+        };
+        try {
+            window.speechSynthesis.speak(u);
+        } catch (e) {
+            log('error', e.message);
+        }
     };
     speakNext();
 }
@@ -253,8 +273,12 @@ function speakTextSample(text) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = detectLanguage(text);
     if (voice) u.voice = voice;
-    u.rate = cfg.rate; u.pitch = cfg.pitch; u.volume = cfg.volume;
-    try { window.speechSynthesis.speak(u); } catch {}
+    u.rate = cfg.rate;
+    u.pitch = cfg.pitch;
+    u.volume = cfg.volume;
+    try {
+        window.speechSynthesis.speak(u);
+    } catch {}
 }
 
 function detectLanguage(text) {
@@ -269,7 +293,8 @@ function initVoices() {
         if (!select) return;
         const voices = window.speechSynthesis.getVoices();
         select.innerHTML = '';
-        const options = voices.filter(v => ['fr', 'en'].includes((v.lang||'').slice(0,2))).map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`);
+        const options = voices.filter(v => ['fr', 'en'].includes((v.lang || '').slice(0, 2)))
+            .map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`);
         select.insertAdjacentHTML('beforeend', options.join(''));
         applySavedVoice();
     };
@@ -288,9 +313,11 @@ function getSelectedVoice() {
 function selectBestVoiceForLang(lang) {
     const select = document.getElementById('voiceSelect');
     const voices = window.speechSynthesis.getVoices();
-    const candidates = voices.filter(v => (v.lang || '').toLowerCase().startsWith(lang.toLowerCase().slice(0,2)));
+    const candidates = voices.filter(v => (v.lang || '').toLowerCase().startsWith(lang.toLowerCase().slice(0, 2)));
     const preferred = candidates.find(v => /Microsoft|Google|Neural/i.test(v.name)) || candidates[0] || null;
-    if (preferred && select) { select.value = preferred.name; }
+    if (preferred && select) {
+        select.value = preferred.name;
+    }
 }
 
 function getTonePreset() {
@@ -307,12 +334,20 @@ function getTonePreset() {
 function adjustToneForText(text, preset) {
     const t = text.toLowerCase();
     let { rate, pitch, volume, pauseMs } = preset;
-    const ex = (text.match(/!+/g)||[]).length; const q = (text.match(/\?+/g)||[]).length;
-    rate += Math.min(0.05*ex, 0.15); pitch += Math.min(0.03*q, 0.12);
+    const ex = (text.match(/!+/g) || []).length;
+    const q = (text.match(/\?+/g) || []).length;
+    rate += Math.min(0.05 * ex, 0.15);
+    pitch += Math.min(0.03 * q, 0.12);
     const slowWords = ['dark', 'noir', 'silence', 'quiet', 'creak', 'blood', 'sang', 'tombe', 'midnight'];
-    if (slowWords.some(w => t.includes(w))) { rate -= 0.05; pauseMs += 100; }
+    if (slowWords.some(w => t.includes(w))) {
+        rate -= 0.05;
+        pauseMs += 100;
+    }
     const whisperWords = ['whisper', 'chuchot', 'softly'];
-    if (whisperWords.some(w => t.includes(w))) { volume -= 0.1; pitch += 0.05; }
+    if (whisperWords.some(w => t.includes(w))) {
+        volume -= 0.1;
+        pitch += 0.05;
+    }
     return { rate, pitch, volume, pauseMs };
 }
 
@@ -321,7 +356,9 @@ function getRange(id, def) {
     return el ? parseFloat(el.value) || def : def;
 }
 
-function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+function clamp(x, a, b) {
+    return Math.max(a, Math.min(b, x));
+}
 
 function initSettings() {
     try {
@@ -336,7 +373,6 @@ function initSettings() {
             document.getElementById('voiceRate')?.setAttribute('value', s.voiceRate ?? 0.95);
             document.getElementById('voicePitch')?.setAttribute('value', s.voicePitch ?? 0.90);
             document.getElementById('voiceVolume')?.setAttribute('value', s.voiceVolume ?? 1.0);
-            // Voice will be applied in applySavedVoice()
             window.__savedVoiceName = s.voiceName || null;
         }
     } catch {}
@@ -367,7 +403,10 @@ function saveSettings() {
 }
 
 function renderSlideshow(scenes) {
-    if (!sceneCanvas) { log('error', 'Canvas introuvable'); return; }
+    if (!sceneCanvas) {
+        log('error', 'Canvas introuvable');
+        return;
+    }
     const ctx = sceneCanvas.getContext('2d');
     let idx = 0;
 
@@ -399,7 +438,7 @@ function renderSlideshow(scenes) {
         log('info', `Changement de scène: ${idx + 1}/${scenes.length}`);
     }, 5000);
 
-    renderSlideshow._timer && clearInterval(renderSlideshow._timer);
+    if (renderSlideshow._timer) clearInterval(renderSlideshow._timer);
     renderSlideshow._timer = timer;
 }
 
@@ -423,7 +462,10 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
 
 async function recordWebM() {
     if (recording) return;
-    if (!('MediaRecorder' in window)) { log('warn', 'MediaRecorder non supporté'); return; }
+    if (!('MediaRecorder' in window)) {
+        log('warn', 'MediaRecorder non supporté');
+        return;
+    }
     recording = true;
     recordedChunks = [];
     log('info', 'Enregistrement WebM démarré');
@@ -432,7 +474,9 @@ async function recordWebM() {
     const canvasStream = sceneCanvas.captureStream(fps);
 
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) { log('warn', 'AudioContext non supporté — piste audio désactivée'); }
+    if (!AudioCtx) {
+        log('warn', 'AudioContext non supporté — piste audio désactivée');
+    }
     const ctx = AudioCtx ? new AudioCtx() : null;
     let dest, osc, gain;
     if (ctx) {
@@ -453,7 +497,9 @@ async function recordWebM() {
     ]);
 
     mediaRecorder = new MediaRecorder(mixedStream, { mimeType: 'video/webm;codecs=vp9,opus' });
-    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+    };
     mediaRecorder.onstop = () => {
         if (osc) osc.stop();
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
@@ -519,7 +565,9 @@ function updateLoadingText(text) {
     loadingText.textContent = text;
 }
 
-function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 window.addEventListener('unhandledrejection', (event) => {
     console.error('Erreur non gérée:', event.reason);
@@ -548,10 +596,22 @@ function setupTerminal() {
         autoScroll = !autoScroll;
         terminalAutoscrollBtn.textContent = autoScroll ? '🔁' : '⏹️';
     });
-    filterInfoEl?.addEventListener('change', () => { filters.info = !!filterInfoEl.checked; applyFilters(); });
-    filterWarnEl?.addEventListener('change', () => { filters.warn = !!filterWarnEl.checked; applyFilters(); });
-    filterErrorEl?.addEventListener('change', () => { filters.error = !!filterErrorEl.checked; applyFilters(); });
-    terminalSearchEl?.addEventListener('input', () => { searchText = terminalSearchEl.value.toLowerCase(); applyFilters(); });
+    filterInfoEl?.addEventListener('change', () => {
+        filters.info = !!filterInfoEl.checked;
+        applyFilters();
+    });
+    filterWarnEl?.addEventListener('change', () => {
+        filters.warn = !!filterWarnEl.checked;
+        applyFilters();
+    });
+    filterErrorEl?.addEventListener('change', () => {
+        filters.error = !!filterErrorEl.checked;
+        applyFilters();
+    });
+    terminalSearchEl?.addEventListener('input', () => {
+        searchText = terminalSearchEl.value.toLowerCase();
+        applyFilters();
+    });
     terminalCopyBtn?.addEventListener('click', () => {
         const text = logStore.map(e => `[${new Date(e.ts).toLocaleTimeString()}] ${e.level.toUpperCase()}: ${e.msg}`).join('\n');
         navigator.clipboard?.writeText(text).then(() => log('info', 'Logs copiés dans le presse-papiers'));
@@ -560,22 +620,40 @@ function setupTerminal() {
         const blob = new Blob([JSON.stringify(logStore, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = `terminal-logs-${Date.now()}.json`; a.click();
+        a.href = url;
+        a.download = `terminal-logs-${Date.now()}.json`;
+        a.click();
         URL.revokeObjectURL(url);
         log('info', 'Export JSON des logs téléchargé');
     });
     const orig = { log: console.log, warn: console.warn, error: console.error, info: console.info };
-    console.log = (...args) => { log('info', args.join(' ')); orig.log.apply(console, args); };
-    console.warn = (...args) => { log('warn', args.join(' ')); orig.warn.apply(console, args); };
-    console.error = (...args) => { const err = args[0] instanceof Error ? args[0] : new Error(args.join(' ')); log('error', err.message, { stack: err.stack }); orig.error.apply(console, args); };
-    console.info = (...args) => { log('info', args.join(' ')); orig.info.apply(console, args); };
+    console.log = (...args) => {
+        log('info', args.join(' '));
+        orig.log.apply(console, args);
+    };
+    console.warn = (...args) => {
+        log('warn', args.join(' '));
+        orig.warn.apply(console, args);
+    };
+    console.error = (...args) => {
+        const err = args[0] instanceof Error ? args[0] : new Error(args.join(' '));
+        log('error', err.message, { stack: err.stack });
+        orig.error.apply(console, args);
+    };
+    console.info = (...args) => {
+        log('info', args.join(' '));
+        orig.info.apply(console, args);
+    };
 }
 
 function log(level, msg, ctx = {}) {
-    if (!terminalEl || terminalPaused) return;
     const entry = { ts: Date.now(), level, msg, ctx };
     logStore.push(entry);
-    counters[level]++;
+    counters[level] = (counters[level] || 0) + 1;
+    if (!terminalEl || terminalPaused) {
+        console.log(`[${level.toUpperCase()}]`, msg, ctx);
+        return;
+    }
     updateCounters();
     const passes = filters[level] && (!searchText || (String(msg).toLowerCase().includes(searchText)));
     const time = new Date(entry.ts).toLocaleTimeString();
@@ -641,3 +719,5 @@ async function instrumentedFetch(url, options = {}) {
         throw e;
     }
 }
+
+console.log('✅ app.js complètement chargé');
