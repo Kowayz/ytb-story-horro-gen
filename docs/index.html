@@ -17,11 +17,10 @@
         <main>
             <!-- Section de génération -->
             <section class="generate-section">
-        <aside id="terminalPanel" class="terminal">
-                    <span class="btn-icon">🎬</span>
-                <strong>Terminal</strong>
-                </button>
-                    <button id="terminalPause" title="Pause/lecture">⏸️</button>
+                <div class="controls">
+                    <button id="generateBtn" class="btn-generate"><span class="btn-icon">🎬</span> Lire une histoire</button>
+                    <button id="diagnoseBtn" class="btn-secondary" title="Vérifier votre navigateur">🩺 Diagnostiquer</button>
+                </div>
                 <div id="loadingSection" class="loading-section hidden">
                     <div class="loader"></div>
                     <div id="loadingStatus" class="loading-status">
@@ -115,16 +114,6 @@
         </main>
 
         <!-- Terminal latéral -->
-        <aside id="terminalPanel" class="terminal-panel">
-            <div class="terminal-header">
-                <span>Terminal</span>
-                <div class="terminal-controls">
-                    <button id="terminalPause" title="Pause">⏸️</button>
-                    <button id="terminalClear" title="Effacer">🧹</button>
-                </div>
-            </div>
-            <pre id="terminalOutput" class="terminal-output" aria-live="polite"></pre>
-        </aside>
         <aside id="terminalPanel" class="terminal">
             <div class="terminal-header">
                 <strong>Terminal</strong>

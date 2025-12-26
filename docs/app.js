@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupEventListeners() {
     generateBtn.addEventListener('click', runClientOnlyFlow);
+    document.getElementById('diagnoseBtn')?.addEventListener('click', runDiagnostics);
     document.getElementById('newVideoBtn')?.addEventListener('click', resetAndGenerate);
     document.getElementById('retryBtn')?.addEventListener('click', runClientOnlyFlow);
     recordBtn?.addEventListener('click', recordWebM);
@@ -54,6 +55,60 @@ function setupEventListeners() {
     document.getElementById('voiceRate')?.addEventListener('input', saveSettings);
     document.getElementById('voicePitch')?.addEventListener('input', saveSettings);
     document.getElementById('voiceVolume')?.addEventListener('input', saveSettings);
+}
+
+async function runDiagnostics() {
+    log('info', 'Diagnostic démarré…');
+    try {
+        // Contexte de page
+        log('info', `Origine: ${location.protocol}//${location.hostname}`);
+        log('info', `HTTPS: ${location.protocol === 'https:'}`);
+        log('info', `GitHub Pages: ${/github\.io$/i.test(location.hostname)}`);
+        log('info', `UserAgent: ${navigator.userAgent}`);
+
+        // Web Speech
+        const hasSpeech = 'speechSynthesis' in window;
+        log(hasSpeech ? 'info' : 'warn', `Web Speech supporté: ${hasSpeech}`);
+        let voicesCount = 0;
+        try {
+            voicesCount = window.speechSynthesis.getVoices().length;
+            log('info', `Voix disponibles: ${voicesCount}`);
+        } catch (e) { log('warn', `Lecture des voix impossible: ${e.message}`); }
+
+        // Media / Canvas
+        const hasMediaRecorder = 'MediaRecorder' in window;
+        log(hasMediaRecorder ? 'info' : 'warn', `MediaRecorder: ${hasMediaRecorder}`);
+        const hasAudioContext = !!(window.AudioContext || window.webkitAudioContext);
+        log(hasAudioContext ? 'info' : 'warn', `AudioContext: ${hasAudioContext}`);
+        const canCapture = !!sceneCanvas?.captureStream;
+        log(canCapture ? 'info' : 'warn', `Canvas.captureStream: ${canCapture}`);
+
+        // Stockage
+        try { localStorage.setItem('__diag', 'ok'); localStorage.removeItem('__diag'); log('info', 'localStorage OK'); } catch { log('warn', 'localStorage indisponible'); }
+
+        // Permissions (facultatif)
+        if ('permissions' in navigator) {
+            try {
+                const mic = await navigator.permissions.query({ name: 'microphone' });
+                log('info', `Permission micro: ${mic.state}`);
+            } catch {}
+        }
+
+        // Réseau Reddit
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+            const resp = await instrumentedFetch('https://www.reddit.com/r/scarystories/hot.json?limit=5', { signal: controller.signal });
+            clearTimeout(timeout);
+            log(resp.ok ? 'info' : 'warn', `Reddit status: ${resp.status}`);
+        } catch (e) {
+            log('warn', `Reddit inaccessible (attendu sur Pages/CORS): ${e.message}`);
+        }
+
+        log('info', 'Diagnostic terminé.');
+    } catch (e) {
+        log('error', `Diagnostic échoué: ${e.message}`);
+    }
 }
 
 async function runClientOnlyFlow() {
