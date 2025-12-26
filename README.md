@@ -110,7 +110,7 @@ Vous pouvez utiliser le projet entièrement côté navigateur, sans serveur Node
 
 ## 🌐 Déploiement GitHub Pages (recommandé)
 
-Ce projet est prêt pour GitHub Pages via le dossier `docs/`.
+Ce projet peut être publié via GitHub Pages depuis le **dossier racine** (avec `index.html` à la source), ou via le **dossier `docs/`**.
 
 1. Initialisez le dépôt local et créez la branche principale:
    ```powershell
@@ -125,10 +125,9 @@ Ce projet est prêt pour GitHub Pages via le dossier `docs/`.
    git remote add origin https://github.com/<votre_user>/<votre_repo>.git
    git push -u origin main
    ```
-4. Activez GitHub Pages:
-   - Dans GitHub → Repository → Settings → Pages
-   - Source: "Deploy from a branch"
-   - Branch: `main`, Dossier: `/docs`
+4. Activez GitHub Pages (choisissez l'une des options):
+   - Option A (racine): Branch `main`, Dossier: `/root` (le dépôt racine)
+   - Option B (`docs/`): Branch `main`, Dossier: `/docs`
 
 Votre site sera publié à: `https://<votre_user>.github.io/<votre_repo>/`.
 

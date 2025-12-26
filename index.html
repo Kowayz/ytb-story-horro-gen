@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Horror Story — Générateur vidéo IA (Client-Only)</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>Horror Story</h1>
+    <p>Choisit une histoire d'horreur sur Reddit, la narre (voix IA) et crée un diaporama vidéo — le tout côté navigateur.</p>
+  </header>
+
+  <main class="layout">
+    <section class="main-panel">
+      <div class="controls">
+        <button id="generateBtn" class="primary">Lire une histoire</button>
+        <button id="recordBtn" class="secondary" title="Enregistre un WebM de la lecture">Enregistrer la vidéo (WebM)</button>
+      </div>
+
+      <section id="loadingSection" class="card hidden">
+        <h2>Préparation…</h2>
+        <ol class="steps">
+          <li class="step" data-step="story">Histoire</li>
+          <li class="step" data-step="audio">Voix IA</li>
+          <li class="step" data-step="slideshow">Diaporama</li>
+        </ol>
+        <p class="loading-text">En attente…</p>
+      </section>
+
+      <section id="storySection" class="card hidden">
+        <h2 id="storyTitle">Titre</h2>
+        <p id="storyAuthor" class="muted">Par u/author</p>
+        <p><a id="storyLink" href="#" target="_blank" rel="noopener">Voir sur Reddit</a></p>
+        <article id="storyText" class="story"></article>
+        <div class="actions">
+          <button id="newVideoBtn" class="secondary">Nouvelle vidéo</button>
+        </div>
+      </section>
+
+      <section id="slideshowSection" class="card hidden">
+        <h2>Diaporama</h2>
+        <canvas id="sceneCanvas" width="1280" height="720"></canvas>
+      </section>
+
+      <section id="errorSection" class="card hidden error">
+        <h2>Une erreur s'est produite</h2>
+        <p id="errorMessage">Détails de l'erreur…</p>
+        <button id="retryBtn" class="primary">Réessayer</button>
+      </section>
+    </section>
+
+    <aside id="terminalPanel" class="terminal">
+      <div class="terminal-header">
+        <strong>Terminal</strong>
+        <div class="terminal-controls">
+          <button id="terminalPause" title="Pause/lecture">⏸️</button>
+          <button id="terminalClear" title="Effacer">🧹</button>
+        </div>
+      </div>
+      <pre id="terminalOutput" class="terminal-output" aria-live="polite"></pre>
+    </aside>
+  </main>
+
+  <footer class="site-footer">
+    <p>Client-only: utilise l'API Web Speech et MediaRecorder. Aucune dépense, aucune clé API.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
