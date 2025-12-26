@@ -268,6 +268,10 @@ function showSection(section) {
   section.classList.remove('hidden');
 }
 
+function hideSection(section) {
+  if (section && section.classList) section.classList.add('hidden');
+}
+
 function updateLoadingStep(stepName, status) {
   const step = document.querySelector(`[data-step="${stepName}"]`);
   if (step) {
