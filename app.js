@@ -26,17 +26,46 @@ const counters = { info: 0, warn: 0, error: 0 };
 const filters = { info: true, warn: true, error: true };
 let searchText = '';
 
+console.log('🔴 DEBUT DU SCRIPT app.js');
+
 document.addEventListener('DOMContentLoaded', () => {
-  setupEventListeners();
-  setupTerminal();
-  initVoices();
-  initSettings();
-  log('info', 'Application prête. Cliquez sur "Lire une histoire".');
+  console.log('🟢 DOMContentLoaded déclenché');
+  try {
+    console.log('🔧 Appel setupTerminal...');
+    setupTerminal();
+    console.log('✅ setupTerminal OK');
+    
+    console.log('🔧 Appel setupEventListeners...');
+    setupEventListeners();
+    console.log('✅ setupEventListeners OK');
+    
+    console.log('🔧 Appel initVoices...');
+    initVoices();
+    console.log('✅ initVoices OK');
+    
+    console.log('🔧 Appel initSettings...');
+    initSettings();
+    console.log('✅ initSettings OK');
+    
+    log('info', 'Application prête. Cliquez sur "Lire une histoire".');
+    console.log('✅ Application initialisée');
+  } catch (e) {
+    console.error('❌ ERREUR LORS DE L\'INITIALISATION:', e);
+    alert('Erreur: ' + e.message);
+  }
 });
 
 function setupEventListeners() {
+  console.log('📌 setupEventListeners - generateBtn:', generateBtn);
+  if (!generateBtn) {
+    console.error('❌ generateBtn est null!');
+    return;
+  }
   log('info', '🔧 Installation des écouteurs d\'événements');
-  generateBtn.addEventListener('click', runClientOnlyFlow);
+  generateBtn.addEventListener('click', () => {
+    console.log('🎯 CLIC SUR generateBtn détecté');
+    runClientOnlyFlow();
+  });
   log('info', '✅ Écouteur generateBtn installé');
   document.getElementById('diagnoseBtn')?.addEventListener('click', runDiagnostics);
   document.getElementById('newVideoBtn')?.addEventListener('click', resetAndGenerate);
