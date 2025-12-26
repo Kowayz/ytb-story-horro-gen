@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Test Boutons</title>
+  <style>
+    body { font-family: system-ui; padding: 20px; background: #0a0a0a; color: #fff; }
+    button { padding: 12px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
+    .primary { background: #8b0000; color: white; border: none; border-radius: 8px; }
+    #output { margin-top: 20px; padding: 10px; background: #1a1a1a; border: 1px solid #333; min-height: 100px; }
+  </style>
+</head>
+<body>
+  <h1>Test des boutons</h1>
+  <button id="test1" class="primary">Test 1 - Simple</button>
+  <button id="test2" class="primary">Test 2 - Avec log</button>
+  <button id="generateBtn" class="primary">Test 3 - generateBtn</button>
+  <div id="output"></div>
+
+  <script>
+    const output = document.getElementById('output');
+    function addLine(msg) {
+      output.innerHTML += msg + '<br>';
+      console.log(msg);
+    }
+
+    // Test 1: bouton simple
+    const test1 = document.getElementById('test1');
+    if (test1) {
+      test1.addEventListener('click', () => addLine('✅ Test 1 OK: bouton cliqué'));
+      addLine('✅ Test 1 écouteur ajouté');
+    } else {
+      addLine('❌ Test 1: élément non trouvé');
+    }
+
+    // Test 2: avec une fonction
+    const test2 = document.getElementById('test2');
+    if (test2) {
+      test2.addEventListener('click', function() { 
+        addLine('✅ Test 2 OK: fonction appelée'); 
+        addLine(`Date: ${new Date().toLocaleTimeString()}`);
+      });
+      addLine('✅ Test 2 écouteur ajouté');
+    }
+
+    // Test 3: generateBtn comme dans app.js
+    const generateBtn = document.getElementById('generateBtn');
+    if (generateBtn) {
+      generateBtn.addEventListener('click', () => addLine('✅ Test 3 OK: generateBtn fonctionne'));
+      addLine('✅ Test 3 écouteur ajouté');
+    } else {
+      addLine('❌ Test 3: generateBtn non trouvé');
+    }
+
+    addLine('--- Script chargé et prêt ---');
+  </script>
+</body>
+</html>

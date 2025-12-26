@@ -544,10 +544,13 @@ function setupTerminal() {
 }
 
 function log(level, msg, ctx = {}) {
-  if (!terminalEl || terminalPaused) return;
   const entry = { ts: Date.now(), level, msg, ctx };
   logStore.push(entry);
-  counters[level]++;
+  counters[level] = (counters[level] || 0) + 1;
+  if (!terminalEl || terminalPaused) {
+    console.log(`[${level.toUpperCase()}]`, msg, ctx);
+    return;
+  }
   updateCounters();
   const passes = filters[level] && (!searchText || (String(msg).toLowerCase().includes(searchText)));
   const time = new Date(entry.ts).toLocaleTimeString();
