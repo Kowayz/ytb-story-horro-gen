@@ -293,6 +293,18 @@ header h1 {
     border-color: var(--accent);
 }
 
+/* TTS Controls */
+.tts-controls { margin-top: 16px; }
+.tts-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.tts-row label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9em; }
+.tts-row select, .tts-row input[type="range"] {
+    background: var(--bg-lighter);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 6px 8px;
+    border-radius: 8px;
+}
+
 /* Error Section */
 .error-section {
     margin: 40px 0;

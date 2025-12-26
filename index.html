@@ -42,6 +42,33 @@
       <section id="slideshowSection" class="card hidden">
         <h2>Diaporama</h2>
         <canvas id="sceneCanvas" width="1280" height="720"></canvas>
+        <div class="tts-controls card">
+          <h3>Voix IA</h3>
+          <div class="tts-row">
+            <label>Voix
+              <select id="voiceSelect"></select>
+            </label>
+            <label>Preset
+              <select id="tonePreset">
+                <option value="horror">Horror</option>
+                <option value="narrator" selected>Narrator</option>
+                <option value="calm">Calm</option>
+                <option value="intense">Intense</option>
+              </select>
+            </label>
+            <label>Vitesse
+              <input id="voiceRate" type="range" min="0.6" max="1.4" step="0.01" value="0.95" />
+            </label>
+            <label>Pitch
+              <input id="voicePitch" type="range" min="0.5" max="1.5" step="0.01" value="0.90" />
+            </label>
+            <label>Volume
+              <input id="voiceVolume" type="range" min="0.5" max="1.0" step="0.01" value="1.0" />
+            </label>
+            <button id="testVoiceBtn" class="secondary">Tester la voix</button>
+          </div>
+          <p class="muted">La voix dépend des voix disponibles dans votre navigateur/système.</p>
+        </div>
       </section>
 
       <section id="errorSection" class="card hidden error">

@@ -28,6 +28,7 @@ let searchText = '';
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     setupTerminal();
+    initVoices();
     log('info', 'Application prête. Cliquez sur "Lire une histoire".');
 });
 
@@ -36,6 +37,9 @@ function setupEventListeners() {
     document.getElementById('newVideoBtn')?.addEventListener('click', resetAndGenerate);
     document.getElementById('retryBtn')?.addEventListener('click', runClientOnlyFlow);
     recordBtn?.addEventListener('click', recordWebM);
+    document.getElementById('testVoiceBtn')?.addEventListener('click', () => {
+        speakTextSample('Cette voix est-elle correcte pour une histoire d\'horreur ?');
+    });
 }
 
 async function runClientOnlyFlow() {
@@ -56,7 +60,8 @@ async function runClientOnlyFlow() {
         updateLoadingStep('audio', 'active');
         updateLoadingText('Narration IA en cours...');
 
-        speakStory(`${story.title}. ${story.text}`);
+        // Speak title + scenes with selected voice/tone
+        speakScenes(splitIntoScenes(`${story.text}`, 6), story.title);
         log('info', 'Narration démarrée via Web Speech');
         updateLoadingStep('audio', 'completed');
 
@@ -137,17 +142,48 @@ function splitIntoScenes(text, maxScenes = 6) {
 
 function speakStory(text) {
     if (!('speechSynthesis' in window)) { log('warn', 'Web Speech non supporté'); return; }
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = detectLanguage(text);
-    utter.rate = 0.95;
-    utter.pitch = 0.9;
-    try {
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utter);
-    } catch (e) {
-        log('error', `Échec de la narration: ${e.message}`);
-    }
-    utter.onend = () => log('info', 'Narration terminée');
+    // Deprecated single blob; use scene-based speaking
+    speakScenes(splitIntoScenes(text, 6), '');
+}
+
+function speakScenes(scenes, title = '') {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const voice = getSelectedVoice();
+    const preset = getTonePreset();
+    const items = [];
+    if (title) items.push(`${title}.`);
+    items.push(...scenes);
+    log('info', `Lecture avec voix: ${voice?.name || 'par défaut'}, preset: ${preset.name}`);
+    let i = 0;
+    const speakNext = () => {
+        if (i >= items.length) { log('info', 'Narration terminée'); return; }
+        const text = items[i++];
+        const cfg = adjustToneForText(text, preset);
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = detectLanguage(text);
+        if (voice) u.voice = voice;
+        u.rate = clamp(cfg.rate, 0.5, 2.0);
+        u.pitch = clamp(cfg.pitch, 0.1, 2.0);
+        u.volume = clamp(cfg.volume, 0.0, 1.0);
+        u.onend = () => setTimeout(speakNext, cfg.pauseMs || 250);
+        u.onerror = (e) => { log('error', 'Erreur TTS', { error: e?.error }); setTimeout(speakNext, 250); };
+        try { window.speechSynthesis.speak(u); } catch (e) { log('error', e.message); }
+    };
+    speakNext();
+}
+
+function speakTextSample(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const voice = getSelectedVoice();
+    const preset = getTonePreset();
+    const cfg = adjustToneForText(text, preset);
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = detectLanguage(text);
+    if (voice) u.voice = voice;
+    u.rate = cfg.rate; u.pitch = cfg.pitch; u.volume = cfg.volume;
+    try { window.speechSynthesis.speak(u); } catch {}
 }
 
 function detectLanguage(text) {
@@ -155,6 +191,57 @@ function detectLanguage(text) {
     const count = englishHints.reduce((acc, w) => acc + (text.toLowerCase().includes(w) ? 1 : 0), 0);
     return count >= 3 ? 'en-US' : 'fr-FR';
 }
+
+function initVoices() {
+    const fill = () => {
+        const select = document.getElementById('voiceSelect');
+        if (!select) return;
+        const voices = window.speechSynthesis.getVoices();
+        select.innerHTML = '';
+        const options = voices.filter(v => ['fr', 'en'].includes((v.lang||'').slice(0,2))).map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`);
+        select.insertAdjacentHTML('beforeend', options.join(''));
+    };
+    try { fill(); } catch {}
+    window.speechSynthesis.onvoiceschanged = fill;
+}
+
+function getSelectedVoice() {
+    const select = document.getElementById('voiceSelect');
+    if (!select) return null;
+    const name = select.value;
+    const voices = window.speechSynthesis.getVoices();
+    return voices.find(v => v.name === name) || null;
+}
+
+function getTonePreset() {
+    const id = document.getElementById('tonePreset')?.value || 'narrator';
+    const base = {
+        horror: { name: 'Horror', rate: getRange('voiceRate', 0.85), pitch: getRange('voicePitch', 0.85), volume: getRange('voiceVolume', 1.0), pauseMs: 350 },
+        narrator: { name: 'Narrator', rate: getRange('voiceRate', 0.95), pitch: getRange('voicePitch', 0.90), volume: getRange('voiceVolume', 1.0), pauseMs: 250 },
+        calm: { name: 'Calm', rate: getRange('voiceRate', 0.90), pitch: getRange('voicePitch', 0.80), volume: getRange('voiceVolume', 0.95), pauseMs: 300 },
+        intense: { name: 'Intense', rate: getRange('voiceRate', 1.05), pitch: getRange('voicePitch', 1.10), volume: getRange('voiceVolume', 1.0), pauseMs: 200 }
+    };
+    return base[id] || base.narrator;
+}
+
+function adjustToneForText(text, preset) {
+    const t = text.toLowerCase();
+    let { rate, pitch, volume, pauseMs } = preset;
+    const ex = (text.match(/!+/g)||[]).length; const q = (text.match(/\?+/g)||[]).length;
+    rate += Math.min(0.05*ex, 0.15); pitch += Math.min(0.03*q, 0.12);
+    const slowWords = ['dark', 'noir', 'silence', 'quiet', 'creak', 'blood', 'sang', 'tombe', 'midnight'];
+    if (slowWords.some(w => t.includes(w))) { rate -= 0.05; pauseMs += 100; }
+    const whisperWords = ['whisper', 'chuchot', 'softly'];
+    if (whisperWords.some(w => t.includes(w))) { volume -= 0.1; pitch += 0.05; }
+    return { rate, pitch, volume, pauseMs };
+}
+
+function getRange(id, def) {
+    const el = document.getElementById(id);
+    return el ? parseFloat(el.value) || def : def;
+}
+
+function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
 function renderSlideshow(scenes) {
     if (!sceneCanvas) { log('error', 'Canvas introuvable'); return; }

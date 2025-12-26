@@ -52,6 +52,18 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .story { white-space: pre-wrap; line-height: 1.5; }
 .actions { margin-top: 8px; }
 
+/* TTS Controls */
+.tts-controls { margin-top: 16px; }
+.tts-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.tts-row label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9em; }
+.tts-row select, .tts-row input[type="range"] {
+  background: #1d1d1d;
+  border: 1px solid #333;
+  color: #e8e8e8;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
 .steps {
   list-style: none;
   padding: 0; margin: 8px 0 12px;
