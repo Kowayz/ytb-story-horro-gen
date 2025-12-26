@@ -17,6 +17,8 @@ let recordedChunks = [];
 
 let terminalPaused = false;
 let autoScroll = true;
+let persistEnabled = true;
+let autoLangEnabled = true;
 let terminalEl, terminalClearBtn, terminalPauseBtn, terminalCopyBtn, terminalExportBtn, terminalAutoscrollBtn;
 let filterInfoEl, filterWarnEl, filterErrorEl, terminalSearchEl, terminalCountersEl;
 const logStore = [];
@@ -28,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   setupTerminal();
   initVoices();
+  initSettings();
   log('info', 'Application prête. Cliquez sur "Lire une histoire".');
 });
 
@@ -36,6 +39,20 @@ function setupEventListeners() {
   document.getElementById('newVideoBtn')?.addEventListener('click', resetAndGenerate);
   document.getElementById('retryBtn')?.addEventListener('click', runClientOnlyFlow);
   recordBtn?.addEventListener('click', recordWebM);
+  document.getElementById('testVoiceBtn')?.addEventListener('click', () => {
+    speakTextSample('Cette voix est-elle correcte pour une histoire d\'horreur ?');
+  });
+  document.getElementById('autoMatchLang')?.addEventListener('change', (e) => {
+    autoLangEnabled = !!e.target.checked; saveSettings();
+  });
+  document.getElementById('persistSettings')?.addEventListener('change', (e) => {
+    persistEnabled = !!e.target.checked; if (persistEnabled) saveSettings(); else localStorage.removeItem('ttsSettings');
+  });
+  document.getElementById('voiceSelect')?.addEventListener('change', saveSettings);
+  document.getElementById('tonePreset')?.addEventListener('change', saveSettings);
+  document.getElementById('voiceRate')?.addEventListener('input', saveSettings);
+  document.getElementById('voicePitch')?.addEventListener('input', saveSettings);
+  document.getElementById('voiceVolume')?.addEventListener('input', saveSettings);
   document.getElementById('testVoiceBtn')?.addEventListener('click', () => {
     speakTextSample('Cette voix est-elle correcte pour une histoire d\'horreur ?');
   });
@@ -134,6 +151,8 @@ function speakStory(text) {
 function speakScenes(scenes, title = '') {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
+  const lang = detectLanguage(text);
+  if (autoLangEnabled) selectBestVoiceForLang(lang);
   const voice = getSelectedVoice();
   const preset = getTonePreset();
   const items = [];
@@ -185,6 +204,7 @@ function initVoices() {
     select.innerHTML = '';
     const options = voices.filter(v => ['fr', 'en'].includes((v.lang||'').slice(0,2))).map(v => `<option value="${v.name}">${v.name} (${v.lang})</option>`);
     select.insertAdjacentHTML('beforeend', options.join(''));
+    applySavedVoice();
   };
   try { fill(); } catch {}
   window.speechSynthesis.onvoiceschanged = fill;
@@ -196,6 +216,14 @@ function getSelectedVoice() {
   const name = select.value;
   const voices = window.speechSynthesis.getVoices();
   return voices.find(v => v.name === name) || null;
+}
+
+function selectBestVoiceForLang(lang) {
+  const select = document.getElementById('voiceSelect');
+  const voices = window.speechSynthesis.getVoices();
+  const candidates = voices.filter(v => (v.lang || '').toLowerCase().startsWith(lang.toLowerCase().slice(0,2)));
+  const preferred = candidates.find(v => /Microsoft|Google|Neural/i.test(v.name)) || candidates[0] || null;
+  if (preferred && select) { select.value = preferred.name; }
 }
 
 function getTonePreset() {
@@ -227,6 +255,48 @@ function getRange(id, def) {
 }
 
 function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+
+function initSettings() {
+  try {
+    const raw = localStorage.getItem('ttsSettings');
+    if (raw) {
+      const s = JSON.parse(raw);
+      persistEnabled = s.persistEnabled ?? true;
+      autoLangEnabled = s.autoLangEnabled ?? true;
+      document.getElementById('persistSettings')?.setAttribute('checked', persistEnabled ? 'checked' : '');
+      document.getElementById('autoMatchLang')?.setAttribute('checked', autoLangEnabled ? 'checked' : '');
+      document.getElementById('tonePreset')?.value = s.tonePreset ?? 'narrator';
+      document.getElementById('voiceRate')?.setAttribute('value', s.voiceRate ?? 0.95);
+      document.getElementById('voicePitch')?.setAttribute('value', s.voicePitch ?? 0.90);
+      document.getElementById('voiceVolume')?.setAttribute('value', s.voiceVolume ?? 1.0);
+      window.__savedVoiceName = s.voiceName || null;
+    }
+  } catch {}
+}
+
+function applySavedVoice() {
+  const select = document.getElementById('voiceSelect');
+  if (!select || !window.__savedVoiceName) return;
+  const voices = window.speechSynthesis.getVoices();
+  const exists = voices.some(v => v.name === window.__savedVoiceName);
+  if (exists) select.value = window.__savedVoiceName;
+}
+
+function saveSettings() {
+  if (!persistEnabled) return;
+  try {
+    const data = {
+      persistEnabled,
+      autoLangEnabled,
+      voiceName: document.getElementById('voiceSelect')?.value || null,
+      tonePreset: document.getElementById('tonePreset')?.value || 'narrator',
+      voiceRate: getRange('voiceRate', 0.95),
+      voicePitch: getRange('voicePitch', 0.90),
+      voiceVolume: getRange('voiceVolume', 1.0)
+    };
+    localStorage.setItem('ttsSettings', JSON.stringify(data));
+  } catch {}
+}
 
 function renderSlideshow(scenes) {
   if (!sceneCanvas) { log('error', 'Canvas introuvable'); return; }
