@@ -93,7 +93,7 @@ Vous pouvez utiliser le projet entièrement côté navigateur, sans serveur Node
 
 ### Ouvrir l'application
 
-1. Ouvrez le fichier `public/index.html` dans votre navigateur (double-clic)
+1. Ouvrez [index.html](index.html) ou [docs/index.html](docs/index.html) dans votre navigateur
 2. Cliquez sur "Lire une histoire et la narrer"
 3. L'application :
    - Récupère une histoire aléatoire depuis r/scarystories
@@ -135,24 +135,20 @@ Votre site sera publié à: `https://<votre_user>.github.io/<votre_repo>/`.
 
 ```
 Horror Story/
-├── public/                 # Frontend
+├── docs/                  # Frontend (GitHub Pages)
 │   ├── index.html         # Interface utilisateur
 │   ├── styles.css         # Styles CSS
 │   └── app.js             # Logique frontend
-├── services/              # Services backend
-│   ├── redditService.js   # Récupération histoires Reddit
-│   ├── ttsService.js      # Génération voix (TTS)
-│   ├── imageService.js    # Génération images IA
-│   └── videoService.js    # Montage vidéo FFmpeg
-├── routes/                # Routes API
-│   └── storyRoutes.js     # Endpoints API
-├── videos/                # Vidéos générées
-├── images/                # Images générées
-├── audio/                 # Fichiers audio
-├── server.js              # Serveur Express
+├── index.html             # Interface (alternative racine)
+├── styles.css             # Styles racine
+├── app.js                 # Logique racine
+├── services/              # Services backend (optionnels)
+├── routes/                # Routes API (optionnels)
+├── server.js              # Serveur Express (optionnel)
 ├── package.json           # Dépendances
-├── .env                   # Configuration (à créer)
-└── README.md             # Ce fichier
+├── .env.example           # Exemple de configuration
+├── .nojekyll              # Forcer Pages à servir index.html
+└── README.md              # Ce fichier
 ```
 
 ## 🔁 Mode serveur (optionnel)
